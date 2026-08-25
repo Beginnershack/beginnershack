@@ -10,7 +10,6 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 
 from routes.courses_search import courses_search_bp
-from routes.reviews import reviews_bp
 from routes.messages import messages_bp
 
 load_dotenv()
@@ -18,9 +17,9 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# 授業検索・口コミ・メッセージ機能のAPIを登録
+# 授業検索・メッセージ機能のAPIを登録
+# (口コミ機能は POST /api/courses に統合されているため、専用APIは無し)
 app.register_blueprint(courses_search_bp)
-app.register_blueprint(reviews_bp)
 app.register_blueprint(messages_bp)
 
 PORT = int(os.environ.get("PORT", 3001))
