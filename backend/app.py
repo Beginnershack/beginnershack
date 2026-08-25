@@ -9,10 +9,19 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
+from routes.courses_search import courses_search_bp
+from routes.reviews import reviews_bp
+from routes.messages import messages_bp
+
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+# 授業検索・口コミ・メッセージ機能のAPIを登録
+app.register_blueprint(courses_search_bp)
+app.register_blueprint(reviews_bp)
+app.register_blueprint(messages_bp)
 
 PORT = int(os.environ.get("PORT", 3001))
 
