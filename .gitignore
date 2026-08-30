@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+*.egg-info/
+
+# 環境変数
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# エディタ
+.vscode/

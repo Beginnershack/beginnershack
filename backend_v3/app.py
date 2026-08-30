@@ -1,10 +1,10 @@
 import json
 import os
-import time
 import random
 import string
 import re
 import requests
+import uuid  # ← 追加：誰とも被らない秘密のIDを作るツール
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone
 
@@ -41,10 +41,7 @@ def write_courses(courses):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(courses, f, ensure_ascii=False, indent=2)
 
-# --- 究極の裏技：ハイブリッド方式（事前データ＋GET検索） ---
 def scrape_subject_id(course_code, teacher_name):
-    # 【事前準備データ】画像から抽出した無敵のリスト
-    # ※入力揺れを防ぐため、先生の名前はスペースを抜いた状態で登録しています
     EMERGENCY_CACHE = {
         ("v1007000", "高木淳"): "002400055907",
         ("v1010000", "矢野良和"): "002400055913",
@@ -58,14 +55,11 @@ def scrape_subject_id(course_code, teacher_name):
         ("v2005000", "釘宮慎一"): "002400055974",
     }
     
-    # 入力された先生の名前からスペース（全角・半角）を消して照合する
     normalized_teacher = teacher_name.replace(" ", "").replace(" ", "")
     
     if (course_code, normalized_teacher) in EMERGENCY_CACHE:
-        print("-> 【裏技発動！】事前データから一瞬でIDを取得しました！安全・爆速です！")
         return EMERGENCY_CACHE[(course_code, normalized_teacher)]
 
-    print("-> 辞書にないため、大学のサーバーへGET検索を試みます...")
     search_url = f"https://syllabus.aitech.ac.jp/ext_syllabus/syllabusSearch.do?freeWord={course_code}"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -78,21 +72,16 @@ def scrape_subject_id(course_code, teacher_name):
         
         for row in rows:
             row_text = row.get_text()
-            # 検索結果もスペース無視でマッチング
             if normalized_teacher in row_text.replace(" ", "").replace(" ", ""):
                 link = row.find('a', href=True)
                 if link and 'subjectId=' in link['href']:
                     match = re.search(r'subjectId=([0-9]+)', link['href'])
                     if match:
-                        print(f"-> 検索成功！ID: {match.group(1)}")
                         return match.group(1)
                         
-        print("-> 検索しましたが、該当する行が見つかりませんでした。")
         return None
-    except Exception as e:
-        print(f"スクレイピングエラー（スキップしました）: {e}")
+    except Exception:
         return None
-# ----------------------------------------------------
 
 def create_course(data):
     courses = read_courses()
@@ -108,6 +97,8 @@ def create_course(data):
             final_syllabus_url = f"https://syllabus.aitech.ac.jp/ext_syllabus/referenceDirect.do?nologin=on&subjectID={extracted_id}&formatCD=1"
 
     new_course = {
+        "id": str(uuid.uuid4()),  # ← 復活！システム用の秘密ID
+        "投稿者": "匿名",         # ← 画面にはこれが出ます
         "授業名": data.get("授業名"),
         "担当教員": teacher_name,
         "開講学期": data.get("開講学期"),
@@ -134,6 +125,41 @@ def hello():
 @app.route("/api/health")
 def health():
     return jsonify({"status": "ok"})
+
+@app.route("/api/courses", methods=["GET"])
+def get_courses():
+    courses = read_courses()
+    
+    course_name = request.args.get("course_name", "")
+    teacher = request.args.get("teacher", "")
+    semester = request.args.get("semester", "")
+    day = request.args.get("day", "")
+    period = request.args.get("period", "")
+    department = request.args.get("department", "")
+    
+    results = []
+    for c in courses:
+        match = True
+        
+        if course_name and course_name not in c.get("授業名", ""):
+            match = False
+        if teacher and teacher not in c.get("担当教員", ""):
+            match = False
+        if semester and c.get("開講学期") != semester:
+            match = False
+        if day and c.get("曜日") != day:
+            match = False
+        if period and str(c.get("時限")) != str(period):
+            match = False
+        if department and department not in c.get("学部学科", ""):
+            match = False
+            
+        if match:
+            results.append(c)
+            
+    results.sort(key=lambda x: x.get("投稿日時", ""), reverse=True)
+    
+    return jsonify(results), 200
 
 @app.route("/api/courses", methods=["POST"])
 def post_course():
