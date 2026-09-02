@@ -1,7 +1,7 @@
 import { useState } from "react";
 import BackButton from "./BackButton.jsx";
 import ResultCard from "./ResultCard.jsx";
-import searchBg from "../assets/search-bg.png";
+import searchBg from "../assets/search-bg.webp";
 import searchLogo from "../assets/search-logo.png";
 import chevronIcon from "../assets/chevron-icon.png";
 import searchButton from "../assets/search-button.png";

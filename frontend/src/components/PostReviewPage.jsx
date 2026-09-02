@@ -3,11 +3,11 @@ import BackButton from "./BackButton.jsx";
 import { getMyId } from "../lib/identity.js";
 import { FACULTIES, DEPARTMENTS } from "../lib/facultyOptions.js";
 import { API_BASE } from "../config.js";
-import postHeroBg from "../assets/post-hero-bg.png";
+import postHeroBg from "../assets/post-hero-bg.webp";
 import postLogo from "../assets/post-logo.png";
 import starFilled from "../assets/star-filled.png";
 import starOutline from "../assets/star-outline.png";
-import postSubmitButton from "../assets/post-submit-button.png";
+import postSubmitButton from "../assets/post-submit-button.webp";
 import chevronIcon from "../assets/chevron-icon.png";
 
 function FieldLabel({ children, required = true }) {
