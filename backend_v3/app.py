@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 from routes.courses_search import courses_search_bp
 from routes.messages import messages_bp
+from moderation import find_ng_word
 
 load_dotenv()
 
@@ -99,6 +100,7 @@ def create_course(data):
     new_course = {
         "id": str(uuid.uuid4()),  # ← 復活！システム用の秘密ID
         "投稿者": "匿名",         # ← 画面にはこれが出ます
+        "投稿者ID": (data.get("投稿者ID") or "").strip(),  # ← 誰が投稿したかの匿名ID（メッセージの宛先特定に使う）
         "授業名": data.get("授業名"),
         "担当教員": teacher_name,
         "開講学期": data.get("開講学期"),
@@ -125,41 +127,6 @@ def hello():
 @app.route("/api/health")
 def health():
     return jsonify({"status": "ok"})
-
-@app.route("/api/courses", methods=["GET"])
-def get_courses():
-    courses = read_courses()
-    
-    course_name = request.args.get("course_name", "")
-    teacher = request.args.get("teacher", "")
-    semester = request.args.get("semester", "")
-    day = request.args.get("day", "")
-    period = request.args.get("period", "")
-    department = request.args.get("department", "")
-    
-    results = []
-    for c in courses:
-        match = True
-        
-        if course_name and course_name not in c.get("授業名", ""):
-            match = False
-        if teacher and teacher not in c.get("担当教員", ""):
-            match = False
-        if semester and c.get("開講学期") != semester:
-            match = False
-        if day and c.get("曜日") != day:
-            match = False
-        if period and str(c.get("時限")) != str(period):
-            match = False
-        if department and department not in c.get("学部学科", ""):
-            match = False
-            
-        if match:
-            results.append(c)
-            
-    results.sort(key=lambda x: x.get("投稿日時", ""), reverse=True)
-    
-    return jsonify(results), 200
 
 @app.route("/api/courses", methods=["POST"])
 def post_course():
@@ -200,6 +167,11 @@ def post_course():
             errors.append("楽単度は1〜5の星で評価してください")
     except (TypeError, ValueError):
         errors.append("楽単度は数値で入力してください")
+
+    for field in ("授業名", "コメント"):
+        ng = find_ng_word(body.get(field) or "")
+        if ng:
+            errors.append(f"{field}に不適切な表現が含まれています")
 
     if errors:
         return jsonify({"error": " / ".join(errors)}), 400

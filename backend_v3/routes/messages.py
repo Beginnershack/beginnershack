@@ -3,15 +3,24 @@ import json
 import os
 from datetime import datetime, timezone
 
+from moderation import find_ng_word
+
 messages_bp = Blueprint('messages', __name__)
 
 # メッセージを保存するファイルの場所
 DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "messages.json")
+COURSES_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "courses.json")
 
 def read_messages():
     if not os.path.exists(DATA_FILE):
         return []
     with open(DATA_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def read_courses():
+    if not os.path.exists(COURSES_FILE):
+        return []
+    with open(COURSES_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
 def write_messages(messages):
@@ -35,6 +44,54 @@ def get_messages():
             
     return jsonify(chat_history), 200
 
+# --- 自分宛に届いたメッセージの一覧 (GET) ---
+# 自分が投稿した口コミ（授業）ごとに、質問してきた相手とのスレッドを
+# 最新メッセージ付きでまとめて返す。
+@messages_bp.route("/api/messages/inbox", methods=["GET"])
+def get_inbox():
+    my_id = request.args.get("myId", "").strip()
+    if not my_id:
+        return jsonify([]), 200
+
+    courses = read_courses()
+    my_courses = {c.get("id"): c for c in courses if c.get("投稿者ID") == my_id}
+    if not my_courses:
+        return jsonify([]), 200
+
+    messages = read_messages()
+    threads = {}  # (courseId, otherUserId) -> 最新メッセージ
+
+    for m in messages:
+        sender = m.get("送信者")
+        receiver = m.get("受信者")
+
+        if sender in my_courses:
+            course_id, other_id = sender, receiver
+        elif receiver in my_courses:
+            course_id, other_id = receiver, sender
+        else:
+            continue
+
+        key = (course_id, other_id)
+        prev = threads.get(key)
+        if not prev or (m.get("送信日時") or "") > (prev.get("送信日時") or ""):
+            threads[key] = m
+
+    inbox = []
+    for (course_id, other_id), last_msg in threads.items():
+        course = my_courses[course_id]
+        inbox.append({
+            "courseId": course_id,
+            "courseName": course.get("授業名"),
+            "otherUserId": other_id,
+            "lastMessage": last_msg.get("本文"),
+            "lastMessageAt": last_msg.get("送信日時"),
+        })
+
+    inbox.sort(key=lambda r: r["lastMessageAt"] or "", reverse=True)
+    return jsonify(inbox), 200
+
+
 # --- メッセージを送る (POST) ---
 @messages_bp.route("/api/messages", methods=["POST"])
 def post_message():
@@ -47,7 +104,10 @@ def post_message():
     # 入力チェック
     if not sender or not receiver or not text:
         return jsonify({"error": "送信者、受信者、本文はすべて必要です"}), 400
-        
+
+    if find_ng_word(text):
+        return jsonify({"error": "不適切な表現が含まれているため送信できません"}), 400
+
     messages = read_messages()
     
     new_message = {
