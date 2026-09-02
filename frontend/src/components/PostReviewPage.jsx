@@ -2,6 +2,7 @@ import { useState } from "react";
 import BackButton from "./BackButton.jsx";
 import { getMyId } from "../lib/identity.js";
 import { FACULTIES, DEPARTMENTS } from "../lib/facultyOptions.js";
+import { API_BASE } from "../config.js";
 import postHeroBg from "../assets/post-hero-bg.png";
 import postLogo from "../assets/post-logo.png";
 import starFilled from "../assets/star-filled.png";
@@ -144,7 +145,7 @@ export default function PostReviewPage({ onBack }) {
     };
 
     try {
-      const res = await fetch("/api/courses", {
+      const res = await fetch(`${API_BASE}/api/courses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

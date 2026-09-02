@@ -7,6 +7,7 @@ import chevronIcon from "../assets/chevron-icon.png";
 import searchButton from "../assets/search-button.png";
 import searchFooterLogo from "../assets/search-footer-logo.png";
 import { FACULTIES, DEPARTMENTS } from "../lib/facultyOptions.js";
+import { API_BASE } from "../config.js";
 
 const FILTER_FIELDS = ["学部", "学科", "開講学期", "曜日", "時限"];
 
@@ -41,7 +42,7 @@ export default function SearchPage({ onBack, onSelectCourse }) {
     if (filters.時限) params.set("period", filters.時限.replace("限", ""));
 
     try {
-      const res = await fetch(`/api/courses?${params.toString()}`);
+      const res = await fetch(`${API_BASE}/api/courses?${params.toString()}`);
       if (!res.ok) throw new Error();
       let data = await res.json();
       if (searchQuery && teacherQuery) {

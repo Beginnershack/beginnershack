@@ -3,6 +3,7 @@ import BackButton from "./BackButton.jsx";
 import ResultCard from "./ResultCard.jsx";
 import commentIcon from "../assets/comment-icon.png";
 import { getBookmarks } from "../lib/bookmarks.js";
+import { API_BASE } from "../config.js";
 
 export default function FavoritesPage({ onBack, onSelectCourse }) {
   const [courses, setCourses] = useState([]);
@@ -16,7 +17,7 @@ export default function FavoritesPage({ onBack, onSelectCourse }) {
       return;
     }
     setLoading(true);
-    fetch("/api/courses")
+    fetch(`${API_BASE}/api/courses`)
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json();

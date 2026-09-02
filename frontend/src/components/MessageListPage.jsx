@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import BackButton from "./BackButton.jsx";
 import commentIcon from "../assets/comment-icon.png";
 import { getMyId } from "../lib/identity.js";
+import { API_BASE } from "../config.js";
 
 const AVATAR_COLORS = ["#14b8a6", "#f97316", "#3b82f6", "#a855f7", "#ef4444", "#0d9488"];
 
@@ -41,8 +42,8 @@ export default function MessageListPage({ onBack, onSelectConversation }) {
     setLoading(true);
     setError("");
     Promise.all([
-      fetch(`/api/messages/inbox?myId=${encodeURIComponent(myId)}`).then((r) => (r.ok ? r.json() : [])),
-      fetch("/api/courses").then((r) => (r.ok ? r.json() : [])),
+      fetch(`${API_BASE}/api/messages/inbox?myId=${encodeURIComponent(myId)}`).then((r) => (r.ok ? r.json() : [])),
+      fetch(`${API_BASE}/api/courses`).then((r) => (r.ok ? r.json() : [])),
     ])
       .then(([inboxData, coursesData]) => {
         setInbox(inboxData);

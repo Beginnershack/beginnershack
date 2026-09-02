@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import BackButton from "./BackButton.jsx";
 import BookmarkButton from "./BookmarkButton.jsx";
 import { getMyId } from "../lib/identity.js";
+import { API_BASE } from "../config.js";
 import commentIcon from "../assets/comment-icon.png";
 import teacherIcon from "../assets/teacher-icon.png";
 import deptIcon from "../assets/dept-icon.png";
@@ -32,7 +33,7 @@ export default function CourseDetailPage({ courseId, onBack, onMessage }) {
     if (!courseId) return;
     setLoading(true);
     setError("");
-    fetch(`/api/courses/${courseId}`)
+    fetch(`${API_BASE}/api/courses/${courseId}`)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "授業が見つかりません");

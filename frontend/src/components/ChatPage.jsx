@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import BackButton from "./BackButton.jsx";
 import commentIcon from "../assets/comment-icon.png";
+import { API_BASE } from "../config.js";
 
 // スレッドは常に (askerId, courseId) の組で識別する。
 // 自分が質問する側なら sendAs=askerId、投稿者として返信する側なら
@@ -19,7 +20,7 @@ export default function ChatPage({ askerId, courseId, courseName, role, onBack }
     if (!askerId || !courseId) return;
     setLoading(true);
     setError("");
-    fetch(`/api/messages?user1=${encodeURIComponent(askerId)}&user2=${encodeURIComponent(courseId)}`)
+    fetch(`${API_BASE}/api/messages?user1=${encodeURIComponent(askerId)}&user2=${encodeURIComponent(courseId)}`)
       .then(async (res) => {
         if (!res.ok) throw new Error();
         setMessages(await res.json());
@@ -39,7 +40,7 @@ export default function ChatPage({ askerId, courseId, courseName, role, onBack }
     setSending(true);
     setError("");
     try {
-      const res = await fetch("/api/messages", {
+      const res = await fetch(`${API_BASE}/api/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 送信者: sendAs, 受信者: sendTo, 本文: text.trim() }),
