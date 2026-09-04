@@ -1,3 +1,7 @@
+import base64
+import binascii
+import re
+
 from flask import Blueprint, request, jsonify
 from datetime import datetime, timezone
 
@@ -5,6 +9,27 @@ from moderation import find_ng_word
 from models import db, Course, Message
 
 messages_bp = Blueprint('messages', __name__)
+
+# data:image/png;base64,.... の形式だけを許可する
+IMAGE_DATA_URL_RE = re.compile(r"^data:image/(png|jpe?g|gif|webp);base64,(.+)$", re.DOTALL)
+MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5MB
+
+
+def _validate_image(image):
+    """画像のdata URLを検証する。問題があればエラーメッセージを返す。"""
+    match = IMAGE_DATA_URL_RE.match(image)
+    if not match:
+        return "画像の形式が正しくありません"
+
+    try:
+        decoded = base64.b64decode(match.group(2), validate=True)
+    except (binascii.Error, ValueError):
+        return "画像データを読み取れませんでした"
+
+    if len(decoded) > MAX_IMAGE_BYTES:
+        return "画像は5MB以下にしてください"
+
+    return None
 
 
 # --- チャット履歴を見る (GET) ---
@@ -79,18 +104,25 @@ def post_message():
     sender = (body.get("送信者") or "").strip()
     receiver = (body.get("受信者") or "").strip()
     text = (body.get("本文") or "").strip()
+    image = (body.get("画像") or "").strip()
 
-    # 入力チェック
-    if not sender or not receiver or not text:
-        return jsonify({"error": "送信者、受信者、本文はすべて必要です"}), 400
+    # 入力チェック（本文か画像のどちらかがあればよい）
+    if not sender or not receiver or (not text and not image):
+        return jsonify({"error": "送信者、受信者、本文または画像は必要です"}), 400
 
-    if find_ng_word(text):
+    if text and find_ng_word(text):
         return jsonify({"error": "不適切な表現が含まれているため送信できません"}), 400
+
+    if image:
+        error = _validate_image(image)
+        if error:
+            return jsonify({"error": error}), 400
 
     new_message = Message(
         sender=sender,
         receiver=receiver,
         body=text,
+        image=image or None,
         created_at=datetime.now(timezone.utc).isoformat(),
     )
     db.session.add(new_message)

@@ -9,6 +9,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
+from sqlalchemy import inspect, text
+
 from models import db, Course
 from routes.courses_search import courses_search_bp
 from routes.messages import messages_bp
@@ -45,8 +47,21 @@ else:
 app.register_blueprint(courses_search_bp)
 app.register_blueprint(messages_bp)
 
+def migrate_schema():
+    """db.create_all()は既存テーブルへのカラム追加はしないため、
+    足りないカラムがあれば手動で追加する（簡易マイグレーション）。"""
+    inspector = inspect(db.engine)
+    if "messages" not in inspector.get_table_names():
+        return
+    columns = {col["name"] for col in inspector.get_columns("messages")}
+    if "image" not in columns:
+        db.session.execute(text("ALTER TABLE messages ADD COLUMN image TEXT"))
+        db.session.commit()
+
+
 with app.app_context():
     db.create_all()
+    migrate_schema()
     seed_if_empty()
 
 PORT = int(os.environ.get("PORT", 3001))

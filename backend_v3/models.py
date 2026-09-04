@@ -84,6 +84,7 @@ class Message(db.Model):
     sender = db.Column(db.String(100))
     receiver = db.Column(db.String(100))
     body = db.Column(db.Text)
+    image = db.Column(db.Text)  # data:image/...;base64,... 形式で保存
     created_at = db.Column(db.String(64))
 
     def to_dict(self):
@@ -91,6 +92,7 @@ class Message(db.Model):
             "送信者": self.sender,
             "受信者": self.receiver,
             "本文": self.body,
+            "画像": self.image,
             "送信日時": self.created_at,
         }
 
@@ -100,5 +102,6 @@ class Message(db.Model):
             sender=record.get("送信者"),
             receiver=record.get("受信者"),
             body=record.get("本文"),
+            image=record.get("画像"),
             created_at=record.get("送信日時"),
         )

@@ -1,7 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BackButton from "./BackButton.jsx";
 import commentIcon from "../assets/comment-icon.png";
 import { API_BASE } from "../config.js";
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+    reader.readAsDataURL(file);
+  });
+}
 
 // スレッドは常に (askerId, courseId) の組で識別する。
 // 自分が質問する側なら sendAs=askerId、投稿者として返信する側なら
@@ -12,6 +23,8 @@ export default function ChatPage({ askerId, courseId, courseName, role, onBack }
   const [error, setError] = useState("");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [image, setImage] = useState(null); // data URL のプレビュー/送信用
+  const fileInputRef = useRef(null);
 
   const sendAs = role === "poster" ? courseId : askerId;
   const sendTo = role === "poster" ? askerId : courseId;
@@ -34,21 +47,42 @@ export default function ChatPage({ askerId, courseId, courseName, role, onBack }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [askerId, courseId]);
 
+  const handleImageSelect = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setError("");
+    if (!file.type.startsWith("image/")) {
+      setError("画像ファイルを選択してください");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError("画像は5MB以下にしてください");
+      return;
+    }
+    try {
+      setImage(await fileToDataUrl(file));
+    } catch (err) {
+      setError(err.message || "画像の読み込みに失敗しました");
+    }
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!text.trim() || !askerId || !courseId) return;
+    if ((!text.trim() && !image) || !askerId || !courseId) return;
     setSending(true);
     setError("");
     try {
       const res = await fetch(`${API_BASE}/api/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 送信者: sendAs, 受信者: sendTo, 本文: text.trim() }),
+        body: JSON.stringify({ 送信者: sendAs, 受信者: sendTo, 本文: text.trim(), 画像: image }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "送信に失敗しました");
       setMessages((prev) => [...prev, data]);
       setText("");
+      setImage(null);
     } catch (err) {
       setError(err.message || "送信に失敗しました");
     } finally {
@@ -89,16 +123,22 @@ export default function ChatPage({ askerId, courseId, courseName, role, onBack }
                 m.送信者 === sendAs ? (
                   <div key={i} className="flex flex-col gap-[4px] items-end pl-[60px] w-full">
                     <div
-                      className="flex items-center px-[14px] py-[10px] rounded-tl-[13px] rounded-tr-[13px] rounded-bl-[13px] rounded-br-[5px] max-w-full"
+                      className="flex flex-col gap-[6px] items-end px-[14px] py-[10px] rounded-tl-[13px] rounded-tr-[13px] rounded-bl-[13px] rounded-br-[5px] max-w-full"
                       style={{ backgroundImage: "linear-gradient(to right, #a0d8ee 0%, #269ecc 99.99%)" }}
                     >
-                      <p className="font-bold leading-[135%] text-[15px] text-white break-words">{m.本文}</p>
+                      {m.画像 && (
+                        <img src={m.画像} alt="送信された画像" className="max-w-full max-h-[220px] rounded-[10px] object-contain" />
+                      )}
+                      {m.本文 && <p className="font-bold leading-[135%] text-[15px] text-white break-words">{m.本文}</p>}
                     </div>
                   </div>
                 ) : (
                   <div key={i} className="flex flex-col gap-[4px] items-start pr-[60px] w-full">
-                    <div className="bg-[#eef0f4] flex items-center px-[14px] py-[10px] rounded-tl-[13px] rounded-tr-[13px] rounded-br-[13px] rounded-bl-[5px] max-w-full">
-                      <p className="font-bold leading-[135%] text-[#182642] text-[15px] break-words">{m.本文}</p>
+                    <div className="bg-[#eef0f4] flex flex-col gap-[6px] items-start px-[14px] py-[10px] rounded-tl-[13px] rounded-tr-[13px] rounded-br-[13px] rounded-bl-[5px] max-w-full">
+                      {m.画像 && (
+                        <img src={m.画像} alt="送信された画像" className="max-w-full max-h-[220px] rounded-[10px] object-contain" />
+                      )}
+                      {m.本文 && <p className="font-bold leading-[135%] text-[#182642] text-[15px] break-words">{m.本文}</p>}
                     </div>
                   </div>
                 )
@@ -107,7 +147,38 @@ export default function ChatPage({ askerId, courseId, courseName, role, onBack }
 
           {error && <p className="font-bold text-[#ef4444] text-[15px] text-center px-[20px]">{error}</p>}
 
-          <form onSubmit={handleSend} className="flex gap-[10px] items-center px-[20px] py-[16px] w-full mt-auto">
+          {image && (
+            <div className="flex items-center gap-[10px] px-[20px] pt-[10px] w-full mt-auto">
+              <div className="relative">
+                <img src={image} alt="送信する画像のプレビュー" className="h-[64px] w-[64px] object-cover rounded-[10px] border border-[#eef0f4]" />
+                <button
+                  type="button"
+                  onClick={() => setImage(null)}
+                  aria-label="画像を取り消す"
+                  className="absolute -top-[6px] -right-[6px] bg-[#182642] text-white size-[20px] rounded-full text-[12px] leading-none flex items-center justify-center"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSend} className={`flex gap-[10px] items-center px-[20px] py-[16px] w-full ${image ? "" : "mt-auto"}`}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="画像を添付"
+              className="bg-[#f2f4f7] flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full text-[20px]"
+            >
+              📷
+            </button>
             <input
               type="text"
               value={text}
@@ -117,8 +188,8 @@ export default function ChatPage({ askerId, courseId, courseName, role, onBack }
             />
             <button
               type="submit"
-              disabled={sending || !text.trim()}
-              className="bg-gradient-to-r from-[#13b5a3] to-[#0d9488] flex h-[42px] items-center justify-center rounded-[21px] w-[64px] font-black text-white text-[15px] disabled:opacity-50"
+              disabled={sending || (!text.trim() && !image)}
+              className="bg-gradient-to-r from-[#13b5a3] to-[#0d9488] flex h-[42px] items-center justify-center rounded-[21px] w-[64px] shrink-0 font-black text-white text-[15px] disabled:opacity-50"
             >
               送信
             </button>
