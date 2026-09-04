@@ -1,13 +1,20 @@
 import json
+import logging
 import os
 import unicodedata
 
 import pykakasi
+import requests
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 NG_WORDS_FILE = os.path.join(BASE_DIR, "data", "ng_words.json")
 
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_MODERATION_URL = "https://api.openai.com/v1/moderations"
+OPENAI_MODERATION_MODEL = "omni-moderation-latest"
+
 _kks = pykakasi.kakasi()
+_logger = logging.getLogger(__name__)
 
 _words_cache = None
 _words_cache_mtime = None
@@ -95,3 +102,37 @@ def find_ng_word(text):
         if word_kunrei and len(word_kunrei) >= 3 and word_kunrei in text_kunrei:
             return word
     return None
+
+
+def check_image_moderation(image_data_url):
+    """OpenAI Moderation API (omni-moderation) で画像の不適切表現を判定する。
+
+    戻り値:
+        True  -> 不適切と判定された（送信をブロックすべき）
+        False -> 問題なしと判定された
+        None  -> APIキー未設定または通信エラーで判定できなかった
+                 （呼び出し側でフェイルオープンかどうかを決める）
+    """
+    if not OPENAI_API_KEY:
+        _logger.warning("OPENAI_API_KEY未設定のため画像モデレーションをスキップしました")
+        return None
+
+    try:
+        response = requests.post(
+            OPENAI_MODERATION_URL,
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": OPENAI_MODERATION_MODEL,
+                "input": [{"type": "image_url", "image_url": {"url": image_data_url}}],
+            },
+            timeout=15,
+        )
+        response.raise_for_status()
+        results = response.json().get("results") or []
+        return bool(results and results[0].get("flagged"))
+    except Exception:
+        _logger.exception("画像モデレーションAPIの呼び出しに失敗しました")
+        return None

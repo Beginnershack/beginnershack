@@ -5,7 +5,7 @@ import re
 from flask import Blueprint, request, jsonify
 from datetime import datetime, timezone
 
-from moderation import find_ng_word
+from moderation import find_ng_word, check_image_moderation
 from models import db, Course, Message
 
 messages_bp = Blueprint('messages', __name__)
@@ -117,6 +117,9 @@ def post_message():
         error = _validate_image(image)
         if error:
             return jsonify({"error": error}), 400
+
+        if check_image_moderation(image) is True:
+            return jsonify({"error": "不適切な画像が含まれているため送信できません"}), 400
 
     new_message = Message(
         sender=sender,
