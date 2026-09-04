@@ -111,10 +111,10 @@ def check_image_moderation(image_data_url):
         True  -> 不適切と判定された（送信をブロックすべき）
         False -> 問題なしと判定された
         None  -> APIキー未設定または通信エラーで判定できなかった
-                 （呼び出し側でフェイルオープンかどうかを決める）
+                 （呼び出し側はフェイルクローズドで送信を拒否する）
     """
     if not OPENAI_API_KEY:
-        _logger.warning("OPENAI_API_KEY未設定のため画像モデレーションをスキップしました")
+        _logger.warning("OPENAI_API_KEY未設定のため画像モデレーションを実行できません")
         return None
 
     try:

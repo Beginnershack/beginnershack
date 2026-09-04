@@ -118,8 +118,13 @@ def post_message():
         if error:
             return jsonify({"error": error}), 400
 
-        if check_image_moderation(image) is True:
+        # フェイルクローズド: 判定できた場合のみ許可する。
+        # APIキー未設定・通信エラー・タイムアウト(None)の場合も送信を拒否する。
+        moderation_result = check_image_moderation(image)
+        if moderation_result is True:
             return jsonify({"error": "不適切な画像が含まれているため送信できません"}), 400
+        if moderation_result is None:
+            return jsonify({"error": "現在画像を送信できません"}), 400
 
     new_message = Message(
         sender=sender,
