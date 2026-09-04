@@ -48,6 +48,11 @@ export default function SearchPage({ onBack, onSelectCourse }) {
       if (searchQuery && teacherQuery) {
         data = data.filter((c) => (c.担当教員 || "").includes(teacherQuery));
       }
+      // 学科が未選択で学部だけ選ばれている場合、バックエンドの完全一致では
+      // 絞り込めないのでクライアント側で学部学科の前方一致にする
+      if (filters.学部 && !filters.学科) {
+        data = data.filter((c) => (c.学部学科 || "").startsWith(filters.学部));
+      }
       setResults(data);
     } catch {
       setError("検索に失敗しました。しばらくしてからもう一度お試しください");
