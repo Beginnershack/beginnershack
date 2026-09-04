@@ -1,19 +1,26 @@
+import base64
+import binascii
 import json
 import logging
 import os
+import tempfile
+import threading
 import unicodedata
 
 import pykakasi
-import requests
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 NG_WORDS_FILE = os.path.join(BASE_DIR, "data", "ng_words.json")
 
-OPENAI_MODERATION_URL = "https://api.openai.com/v1/moderations"
-OPENAI_MODERATION_MODEL = "omni-moderation-latest"
+# SafeSearchでこの判定以上ならブロックする
+UNSAFE_LIKELIHOODS = {"LIKELY", "VERY_LIKELY"}
 
 _kks = pykakasi.kakasi()
 _logger = logging.getLogger(__name__)
+
+_vision_client = None
+_vision_client_lock = threading.Lock()
+_vision_client_unavailable = False
 
 _words_cache = None
 _words_cache_mtime = None
@@ -103,36 +110,84 @@ def find_ng_word(text):
     return None
 
 
+def _get_vision_client():
+    """GOOGLE_APPLICATION_CREDENTIALS_JSON からVision APIクライアントを作る。
+    未設定・初期化失敗の場合はNoneを返す（一度失敗したら以後は再試行しない）。"""
+    global _vision_client, _vision_client_unavailable
+
+    if _vision_client is not None:
+        return _vision_client
+    if _vision_client_unavailable:
+        return None
+
+    with _vision_client_lock:
+        if _vision_client is not None:
+            return _vision_client
+        if _vision_client_unavailable:
+            return None
+
+        creds_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+        if not creds_json:
+            _logger.warning(
+                "GOOGLE_APPLICATION_CREDENTIALS_JSON未設定のため画像モデレーションを実行できません"
+            )
+            _vision_client_unavailable = True
+            return None
+
+        try:
+            # RenderなどファイルをHDに置けない環境向けに、JSON文字列を
+            # 一時ファイルへ書き出してからSDKに読み込ませる。
+            fd, path = tempfile.mkstemp(prefix="gcp-credentials-", suffix=".json")
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(creds_json)
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = path
+
+            from google.cloud import vision
+
+            _vision_client = vision.ImageAnnotatorClient()
+        except Exception:
+            _logger.exception("Vision APIクライアントの初期化に失敗しました")
+            _vision_client_unavailable = True
+            return None
+
+        return _vision_client
+
+
 def check_image_moderation(image_data_url):
-    """OpenAI Moderation API (omni-moderation) で画像の不適切表現を判定する。
+    """Google Cloud Vision API の SafeSearch Detection で画像の不適切表現を判定する。
 
     戻り値:
         True  -> 不適切と判定された（送信をブロックすべき）
         False -> 問題なしと判定された
-        None  -> APIキー未設定または通信エラーで判定できなかった
+        None  -> 認証情報未設定・通信エラー・タイムアウトなどで判定できなかった
                  （呼び出し側はフェイルクローズドで送信を拒否する）
     """
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        _logger.warning("OPENAI_API_KEY未設定のため画像モデレーションを実行できません")
+    client = _get_vision_client()
+    if client is None:
         return None
 
     try:
-        response = requests.post(
-            OPENAI_MODERATION_URL,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": OPENAI_MODERATION_MODEL,
-                "input": [{"type": "image_url", "image_url": {"url": image_data_url}}],
-            },
-            timeout=15,
+        _, encoded = image_data_url.split(",", 1)
+        image_bytes = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error):
+        _logger.exception("画像データのデコードに失敗しました")
+        return None
+
+    try:
+        from google.cloud import vision
+
+        image = vision.Image(content=image_bytes)
+        response = client.safe_search_detection(image=image, timeout=15)
+        if response.error.message:
+            raise RuntimeError(response.error.message)
+
+        annotation = response.safe_search_annotation
+        unsafe_levels = {vision.Likelihood.LIKELY, vision.Likelihood.VERY_LIKELY}
+        return (
+            annotation.adult in unsafe_levels
+            or annotation.violence in unsafe_levels
+            or annotation.racy in unsafe_levels
         )
-        response.raise_for_status()
-        results = response.json().get("results") or []
-        return bool(results and results[0].get("flagged"))
     except Exception:
-        _logger.exception("画像モデレーションAPIの呼び出しに失敗しました")
+        _logger.exception("画像モデレーションAPI(Vision SafeSearch)の呼び出しに失敗しました")
         return None

@@ -2,3 +2,11 @@ local.db
 __pycache__/
 *.pyc
 .env
+
+# Google Cloudサービスアカウントキー（GOOGLE_APPLICATION_CREDENTIALS_JSONで渡すため
+# ローカルにファイルを置く場合も誤ってコミットしないようにする）
+google-credentials.json
+*-credentials.json
+*-service-account.json
+service-account*.json
+gcp-key*.json
