@@ -9,7 +9,6 @@ import requests
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 NG_WORDS_FILE = os.path.join(BASE_DIR, "data", "ng_words.json")
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 OPENAI_MODERATION_URL = "https://api.openai.com/v1/moderations"
 OPENAI_MODERATION_MODEL = "omni-moderation-latest"
 
@@ -113,7 +112,8 @@ def check_image_moderation(image_data_url):
         None  -> APIキー未設定または通信エラーで判定できなかった
                  （呼び出し側はフェイルクローズドで送信を拒否する）
     """
-    if not OPENAI_API_KEY:
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
         _logger.warning("OPENAI_API_KEY未設定のため画像モデレーションを実行できません")
         return None
 
@@ -121,7 +121,7 @@ def check_image_moderation(image_data_url):
         response = requests.post(
             OPENAI_MODERATION_URL,
             headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
             json={
