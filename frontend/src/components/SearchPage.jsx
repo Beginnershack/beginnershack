@@ -72,7 +72,7 @@ export default function SearchPage({ onBack, onSelectCourse }) {
           <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={searchBg} />
         </div>
 
-        <div className="absolute h-[69px] left-[76px] top-[46px] w-[322px]">
+        <div className="absolute h-[69px] left-[49px] top-[46px] w-[322px]">
           <img alt="愛工大の裏キャンパス" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={searchLogo} />
         </div>
 
