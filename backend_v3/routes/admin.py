@@ -44,3 +44,14 @@ def delete_message(message_id):
     db.session.delete(message)
     db.session.commit()
     return jsonify({"deleted": message_id}), 200
+
+
+@admin_bp.route("/api/admin/reset", methods=["POST"])
+def reset_all_data():
+    if not _is_authorized():
+        return jsonify({"error": "unauthorized"}), 403
+
+    messages_deleted = Message.query.delete()
+    courses_deleted = Course.query.delete()
+    db.session.commit()
+    return jsonify({"deleted": {"courses": courses_deleted, "messages": messages_deleted}}), 200
