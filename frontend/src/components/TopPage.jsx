@@ -56,15 +56,15 @@ export default function TopPage({ onSearch, onPostReview }) {
             </div>
             <div className="flex gap-[40px] items-center shrink-0 w-full">
               <div className="flex gap-[6px] items-center shrink-0">
-                <img alt="" className="h-[28px] w-[28px] shrink-0" src={usageBadge1} />
+                <img alt="" className="h-[22px] w-[22px] shrink-0" src={usageBadge1} />
                 <img alt="授業の検索アイコン" className="h-[46px] w-auto shrink-0" src={usageIconSearch} />
               </div>
               <div className="flex gap-[6px] items-center shrink-0">
-                <img alt="" className="h-[28px] w-[28px] shrink-0" src={usageBadge2} />
+                <img alt="" className="h-[22px] w-[22px] shrink-0" src={usageBadge2} />
                 <img alt="お気に入りアイコン" className="h-[46px] w-auto shrink-0" src={usageIconBookmark} />
               </div>
               <div className="flex gap-[6px] items-center shrink-0">
-                <img alt="" className="h-[28px] w-[28px] shrink-0" src={usageBadge3} />
+                <img alt="" className="h-[22px] w-[22px] shrink-0" src={usageBadge3} />
                 <img alt="評価を見るアイコン" className="h-[46px] w-auto shrink-0" src={usageIconThumbsup} />
               </div>
             </div>
