@@ -153,7 +153,7 @@ export default function SearchPage({ onBack, onSelectCourse }) {
 
       {/* フッター */}
       <div className="w-full flex flex-col items-center bg-[#1a2b3a] pt-[20px] pb-[44px]">
-        <img alt="愛工大の裏キャンパス" className="h-[34px] w-auto" src={searchFooterLogo} />
+        <img alt="愛工大の裏キャンパス" className="h-[42px] w-auto" src={searchFooterLogo} />
       </div>
     </div>
   );
