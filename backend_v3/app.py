@@ -62,7 +62,8 @@ def migrate_schema():
 with app.app_context():
     db.create_all()
     migrate_schema()
-    seed_if_empty()
+    if os.environ.get("SEED_INITIAL_DATA") == "true":
+        seed_if_empty()
 
 PORT = int(os.environ.get("PORT", 3001))
 
