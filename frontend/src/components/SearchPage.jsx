@@ -92,7 +92,7 @@ export default function SearchPage({ onBack, onSelectCourse }) {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="講義名で検索"
-                    className="h-full w-full bg-transparent pl-[10px] pr-[10px] text-[13px] text-black placeholder:text-[#8a93a6] outline-none"
+                    className="h-full w-full border-none bg-transparent pl-[10px] pr-[10px] text-[13px] text-black placeholder:text-[#8a93a6] outline-none"
                   />
                 </div>
                 <div className="absolute h-[28px] left-[15px] rounded-[6px] top-[44px] w-[276px] overflow-hidden bg-white">
@@ -101,7 +101,7 @@ export default function SearchPage({ onBack, onSelectCourse }) {
                     value={teacherQuery}
                     onChange={(e) => setTeacherQuery(e.target.value)}
                     placeholder="先生の名前で検索"
-                    className="h-full w-full bg-transparent pl-[10px] pr-[10px] text-[13px] text-black placeholder:text-[#8a93a6] outline-none"
+                    className="h-full w-full border-none bg-transparent pl-[10px] pr-[10px] text-[13px] text-black placeholder:text-[#8a93a6] outline-none"
                   />
                 </div>
                 <div className="absolute gap-x-[12px] gap-y-[4px] grid grid-cols-3 grid-rows-2 h-[68px] left-[15px] top-[82px] w-[276px]">
