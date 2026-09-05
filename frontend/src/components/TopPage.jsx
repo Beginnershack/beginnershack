@@ -35,7 +35,7 @@ export default function TopPage({ onSearch, onPostReview }) {
               <button
                 type="button"
                 onClick={onPostReview}
-                className="flex h-[30px] items-center justify-center gap-[10px] pl-5 pr-[21px] py-[7px] rounded-[29px] shrink-0 w-[148px]"
+                className="flex h-[48px] items-center justify-center gap-[10px] pl-5 pr-[21px] py-[7px] rounded-[29px] shrink-0 w-[148px]"
                 style={{ backgroundImage: "linear-gradient(270deg, rgb(255, 148, 148) 0%, rgb(227, 179, 132) 27.885%, rgb(210, 210, 122) 45.192%, rgb(158, 189, 110) 66.346%, rgb(109, 153, 89) 80.288%)" }}
               >
                 <span className="font-bold leading-[106.4%] text-[13px] text-white whitespace-nowrap">口コミを投稿する</span>
@@ -121,7 +121,8 @@ export default function TopPage({ onSearch, onPostReview }) {
           <button
             type="button"
             onClick={onSearch}
-            className="h-[41px] relative rounded-[50px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] shrink-0 w-[200px]"
+            aria-label="履修情報を検索する"
+            className="h-[41px] relative rounded-[50px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] shrink-0 w-[200px] before:content-[''] before:absolute before:-inset-y-[4px] before:inset-x-0"
           >
             <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[50px]">
               <img alt="履修情報を検索する" className="absolute h-[2176.22%] left-[-74.5%] max-w-none top-[-827.13%] w-[249%]" src={illustrationAtlas} />

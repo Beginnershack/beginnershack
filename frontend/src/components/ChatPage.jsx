@@ -96,7 +96,7 @@ export default function ChatPage({ askerId, courseId, courseName, role, onBack }
     <div className="bg-white relative w-full max-w-[402px] min-h-[max(560px,var(--rf-fill-height))] overflow-hidden shadow-xl flex flex-col pb-[64px]">
       <div className="h-[110px] w-full bg-gradient-to-r from-[#13b5a3] to-[#0d9488] shrink-0" />
       <BackButton onClick={onBack} className="left-[20px] top-[20px]" />
-      <div className="absolute left-[70px] top-[20px] right-[20px]">
+      <div className="absolute left-[76px] top-[20px] right-[20px]">
         <p className="font-black text-[20px] text-white leading-tight">チャット</p>
         {courseName && <p className="font-medium text-[14px] text-white/80 truncate">{courseName}</p>}
       </div>
@@ -175,7 +175,7 @@ export default function ChatPage({ askerId, courseId, courseName, role, onBack }
               type="button"
               onClick={() => fileInputRef.current?.click()}
               aria-label="画像を添付"
-              className="bg-[#f2f4f7] flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full text-[20px]"
+              className="bg-[#f2f4f7] flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-full text-[20px]"
             >
               📷
             </button>
@@ -189,7 +189,7 @@ export default function ChatPage({ askerId, courseId, courseName, role, onBack }
             <button
               type="submit"
               disabled={sending || (!text.trim() && !image)}
-              className="bg-gradient-to-r from-[#13b5a3] to-[#0d9488] flex h-[42px] items-center justify-center rounded-[21px] w-[64px] shrink-0 font-black text-white text-[15px] disabled:opacity-50"
+              className="bg-gradient-to-r from-[#13b5a3] to-[#0d9488] flex h-[48px] items-center justify-center rounded-[21px] w-[64px] shrink-0 font-black text-white text-[15px] disabled:opacity-50"
             >
               送信
             </button>

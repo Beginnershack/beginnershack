@@ -47,7 +47,7 @@ export default function CourseDetailPage({ courseId, onBack, onMessage }) {
     <div className="bg-white relative w-full max-w-[402px] min-h-[max(560px,var(--rf-fill-height))] overflow-hidden shadow-xl pb-[64px]">
       <div className="h-[110px] w-full bg-gradient-to-r from-[#13b5a3] to-[#0d9488]" />
       <BackButton onClick={onBack} className="left-[20px] top-[20px]" />
-      <p className="absolute left-[70px] top-[27px] font-black text-[20px] text-white">授業評価</p>
+      <p className="absolute left-[76px] top-[27px] font-black text-[20px] text-white">授業評価</p>
       {courseId && (
         <div className="absolute right-[24px] top-[27px]">
           <BookmarkButton courseId={courseId} size={24} inactiveColor="#ffffff" activeColor="#ffffff" />

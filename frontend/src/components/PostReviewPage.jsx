@@ -112,8 +112,8 @@ export default function PostReviewPage({ onBack }) {
   const [faculty, setFaculty] = useState("");
   const [department, setDepartment] = useState("");
   const [semester, setSemester] = useState(SEMESTERS[0]);
-  const [weekday, setWeekday] = useState(WEEKDAYS[0]);
-  const [period, setPeriod] = useState(PERIODS[0]);
+  const [weekday, setWeekday] = useState("");
+  const [period, setPeriod] = useState("");
   const [evalMethod, setEvalMethod] = useState(EVAL_METHODS[0]);
   const [attendance, setAttendance] = useState("あり");
   const [rakutanRating, setRakutanRating] = useState(0);
@@ -162,8 +162,8 @@ export default function PostReviewPage({ onBack }) {
       setFaculty("");
       setDepartment("");
       setSemester(SEMESTERS[0]);
-      setWeekday(WEEKDAYS[0]);
-      setPeriod(PERIODS[0]);
+      setWeekday("");
+      setPeriod("");
       setEvalMethod(EVAL_METHODS[0]);
       setAttendance("あり");
       setRakutanRating(0);
@@ -220,7 +220,7 @@ export default function PostReviewPage({ onBack }) {
                   key={day}
                   type="button"
                   onClick={() => setWeekday(day)}
-                  className={`flex items-center justify-center size-[42px] rounded-[73px] border-[1.5px] border-[rgba(217,217,217,0.73)] border-solid font-black text-[15px] ${
+                  className={`flex items-center justify-center size-[48px] rounded-[73px] border-[1.5px] border-[rgba(217,217,217,0.73)] border-solid font-black text-[15px] ${
                     weekday === day ? "bg-[#13b5a3] text-white" : "bg-white text-[#8a93a6]"
                   }`}
                 >
@@ -238,7 +238,7 @@ export default function PostReviewPage({ onBack }) {
                   key={p}
                   type="button"
                   onClick={() => setPeriod(p)}
-                  className={`flex items-center justify-center size-[42px] rounded-[73px] border-[1.5px] border-[rgba(217,217,217,0.73)] border-solid font-black text-[15px] ${
+                  className={`flex items-center justify-center size-[48px] rounded-[73px] border-[1.5px] border-[rgba(217,217,217,0.73)] border-solid font-black text-[15px] ${
                     period === p ? "bg-[#13b5a3] text-white" : "bg-white text-[#8a93a6]"
                   }`}
                 >

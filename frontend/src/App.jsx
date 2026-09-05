@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from "react-router-dom";
 import ResponsiveFrame from "./components/ResponsiveFrame.jsx";
 import TopPage from "./components/TopPage.jsx";
 import SearchPage from "./components/SearchPage.jsx";
@@ -9,63 +9,108 @@ import ChatPage from "./components/ChatPage.jsx";
 import FavoritesPage from "./components/FavoritesPage.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 
-function loadLastChatContext() {
-  try {
-    const raw = localStorage.getItem("lastChatContext");
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+function navKeyFromPath(pathname) {
+  if (pathname === "/") return "top";
+  if (pathname === "/search") return "search";
+  if (pathname === "/favorites") return "favorites";
+  if (pathname === "/messages" || pathname === "/chat") return "messages";
+  return null;
+}
+
+function TopRoute() {
+  const navigate = useNavigate();
+  return <TopPage onSearch={() => navigate("/search")} onPostReview={() => navigate("/post")} />;
+}
+
+function SearchRoute() {
+  const navigate = useNavigate();
+  return (
+    <SearchPage
+      onBack={() => navigate("/")}
+      onSelectCourse={(id) => navigate(`/course/${id}`)}
+    />
+  );
+}
+
+function PostReviewRoute() {
+  const navigate = useNavigate();
+  return <PostReviewPage onBack={() => navigate("/")} />;
+}
+
+function CourseDetailRoute() {
+  const { courseId } = useParams();
+  const navigate = useNavigate();
+  return (
+    <CourseDetailPage
+      courseId={courseId}
+      onBack={() => navigate(-1)}
+      onMessage={(context) => navigate("/chat", { state: context })}
+    />
+  );
+}
+
+function MessageListRoute() {
+  const navigate = useNavigate();
+  return (
+    <MessageListPage
+      onBack={() => navigate("/")}
+      onSelectConversation={(context) => navigate("/chat", { state: context })}
+    />
+  );
+}
+
+function FavoritesRoute() {
+  const navigate = useNavigate();
+  return (
+    <FavoritesPage
+      onBack={() => navigate("/")}
+      onSelectCourse={(id) => navigate(`/course/${id}`)}
+    />
+  );
+}
+
+function ChatRoute() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const context = location.state || {};
+  return (
+    <ChatPage
+      askerId={context.askerId}
+      courseId={context.courseId}
+      courseName={context.courseName}
+      role={context.role}
+      onBack={() => navigate("/messages")}
+    />
+  );
 }
 
 export default function App() {
-  const [page, setPage] = useState("top");
-  const [selectedCourseId, setSelectedCourseId] = useState(null);
-  const [detailBackTo, setDetailBackTo] = useState("search");
-  const [chatContext, setChatContext] = useState(loadLastChatContext);
-
-  const goTop = () => setPage("top");
-  const goSearch = () => setPage("search");
-  const goChat = () => setPage("messages");
-  const goFavorites = () => setPage("favorites");
-
-  const openDetail = (id, from) => {
-    setSelectedCourseId(id);
-    setDetailBackTo(from);
-    setPage("detail");
-  };
-
-  const openChat = (context) => {
-    setChatContext(context);
-    localStorage.setItem("lastChatContext", JSON.stringify(context));
-    setPage("chat");
-  };
+  const navigate = useNavigate();
+  const location = useLocation();
+  const navKey = navKeyFromPath(location.pathname);
 
   return (
     <div className="min-h-[100dvh] bg-[#f2f2f2] flex items-start justify-center">
       <ResponsiveFrame>
-        {page === "top" && <TopPage onSearch={goSearch} onPostReview={() => setPage("post")} />}
-        {page === "search" && <SearchPage onBack={goTop} onSelectCourse={(id) => openDetail(id, "search")} />}
-        {page === "post" && <PostReviewPage onBack={goTop} />}
-        {page === "detail" && (
-          <CourseDetailPage courseId={selectedCourseId} onBack={() => setPage(detailBackTo)} onMessage={openChat} />
-        )}
-        {page === "messages" && <MessageListPage onBack={goTop} onSelectConversation={openChat} />}
-        {page === "favorites" && (
-          <FavoritesPage onBack={goTop} onSelectCourse={(id) => openDetail(id, "favorites")} />
-        )}
-        {page === "chat" && (
-          <ChatPage
-            askerId={chatContext.askerId}
-            courseId={chatContext.courseId}
-            courseName={chatContext.courseName}
-            role={chatContext.role}
-            onBack={() => setPage("messages")}
-          />
-        )}
+        <Routes>
+          <Route path="/" element={<TopRoute />} />
+          <Route path="/search" element={<SearchRoute />} />
+          <Route path="/post" element={<PostReviewRoute />} />
+          <Route path="/course/:courseId" element={<CourseDetailRoute />} />
+          <Route path="/messages" element={<MessageListRoute />} />
+          <Route path="/chat" element={<ChatRoute />} />
+          <Route path="/favorites" element={<FavoritesRoute />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </ResponsiveFrame>
 
-      <BottomNav current={page} onGoTop={goTop} onGoSearch={goSearch} onGoChat={goChat} onGoFavorites={goFavorites} />
+      <BottomNav
+        current={navKey}
+        onGoTop={() => navigate("/")}
+        onGoSearch={() => navigate("/search")}
+        onGoChat={() => navigate("/messages")}
+        onGoFavorites={() => navigate("/favorites")}
+      />
     </div>
   );
 }
