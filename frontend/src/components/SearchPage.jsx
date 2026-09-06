@@ -78,7 +78,7 @@ export default function SearchPage({ onBack, onSelectCourse }) {
   };
 
   return (
-    <div className="bg-[#ecf0f5] relative w-full max-w-[402px] overflow-hidden min-h-[var(--rf-fill-height)]">
+    <div className="bg-[#ecf0f5] relative w-full max-w-[402px] overflow-hidden min-h-[var(--rf-fill-height)] pb-[64px]">
       <BackButton onClick={onBack} className="left-[14px] top-[16px]" />
 
       {/* ヒーロー: 背景 + ロゴ + 検索フォーム */}
