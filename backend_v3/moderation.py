@@ -32,21 +32,37 @@ def _normalize(text):
     return unicodedata.normalize("NFKC", text or "").lower()
 
 
-def _phonetic_forms(text):
-    """ひらがな読み・ヘボン式ローマ字・訓令式ローマ字の3つを返す。
-    漢字/ひらがな/カタカナ/ローマ字のどの表記で書かれていても
-    同じ言葉として比較できるようにするため。"""
+def _hiragana_tokens(text):
+    """形態素ごとのひらがな読みのリストを返す。漢字/ひらがな/カタカナの
+    どの表記で書かれていても同じ言葉として比較できるようにするため。
+
+    以前はヘボン式/訓令式ローマ字への変換結果や、形態素をまたいで
+    連結した1本のひらがな文字列に対する部分一致判定を使っていたが、
+    モーラの区切りを無視した部分一致になり、「出た方」→"detahou"の
+    中に無関係な語"aho"が出現したり、「適当(てきとう)」の中に
+    「亀頭(きとう)」が部分文字列として出現したりして誤検知が
+    多発した。形態素単位のリストのまま扱い、NGワード側も同じ形態素
+    分割にして「連続する形態素の並びが完全一致するか」で判定することで、
+    単語の境界をまたいだ偶然の部分一致を防ぐ。
+    """
     text = _normalize(text)
     if not text:
-        return "", "", ""
+        return []
     try:
         converted = _kks.convert(text)
     except Exception:
-        return text, text, text
-    hira = "".join(item["hira"] for item in converted)
-    hepburn = "".join(item["hepburn"] for item in converted).lower()
-    kunrei = "".join(item["kunrei"] for item in converted).lower()
-    return hira, hepburn, kunrei
+        return [text]
+    return [item["hira"] for item in converted if item["hira"]]
+
+
+_TOKEN_SEP = "\x1f"  # ひらがなに出現しない制御文字を形態素の区切りに使う
+
+
+def _boundaried(tokens):
+    """形態素のリストを、区切り文字付きの1本の文字列にする。
+    両端にも区切り文字を置くことで、末尾・先頭の形態素も
+    他の形態素の一部として誤って一致しないようにする。"""
+    return _TOKEN_SEP + _TOKEN_SEP.join(tokens) + _TOKEN_SEP
 
 
 def _load_words():
@@ -76,36 +92,36 @@ def load_ng_words():
 
 
 def _ng_word_forms():
-    """NGワード1語ごとの読み・ローマ字表記をキャッシュして返す。"""
+    """NGワード1語ごとの、形態素境界付きひらがな読みをキャッシュして返す。"""
     global _ng_forms_cache, _words_cache_mtime
     words = _load_words()
     # _load_words()がファイル更新を検知した場合はこちらも作り直す
     if _ng_forms_cache is not None and _ng_forms_cache[0] == _words_cache_mtime:
         return _ng_forms_cache[1]
 
-    forms = [(word, *_phonetic_forms(word)) for word in words]
+    forms = []
+    for word in words:
+        tokens = _hiragana_tokens(word)
+        forms.append((word, _boundaried(tokens) if tokens else None))
     _ng_forms_cache = (_words_cache_mtime, forms)
     return forms
 
 
 def find_ng_word(text):
     """textにNGワードが含まれていれば元のNGワードを返す。無ければNone。
-    ひらがな・カタカナ・漢字・ローマ字(ヘボン式/訓令式)の表記ゆれを
-    吸収して判定する。"""
+    ひらがな・カタカナ・漢字の表記ゆれを、形態素単位の完全一致で吸収する
+    (ローマ字読みでの部分一致・形態素をまたぐ部分一致は誤検知が多いため
+    行わない)。"""
     if not text:
         return None
 
     normalized = _normalize(text)
-    text_hira, text_hepburn, text_kunrei = _phonetic_forms(text)
+    text_hira_boundaried = _boundaried(_hiragana_tokens(text))
 
-    for word, word_hira, word_hepburn, word_kunrei in _ng_word_forms():
+    for word, word_hira_boundaried in _ng_word_forms():
         if _normalize(word) in normalized:
             return word
-        if word_hira and word_hira in text_hira:
-            return word
-        if word_hepburn and len(word_hepburn) >= 3 and word_hepburn in text_hepburn:
-            return word
-        if word_kunrei and len(word_kunrei) >= 3 and word_kunrei in text_kunrei:
+        if word_hira_boundaried and word_hira_boundaried in text_hira_boundaried:
             return word
     return None
 
