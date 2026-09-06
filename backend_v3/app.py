@@ -14,6 +14,7 @@ from sqlalchemy import inspect, text
 from models import db, Course
 from routes.courses_search import courses_search_bp
 from routes.messages import messages_bp
+from routes.admin import admin_bp
 from moderation import find_ng_word
 from seed import seed_if_empty
 
@@ -46,6 +47,7 @@ else:
 
 app.register_blueprint(courses_search_bp)
 app.register_blueprint(messages_bp)
+app.register_blueprint(admin_bp)
 
 def migrate_schema():
     """db.create_all()は既存テーブルへのカラム追加はしないため、
