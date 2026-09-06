@@ -27,3 +27,17 @@ def reset_all_data():
     courses_deleted = Course.query.delete()
     db.session.commit()
     return jsonify({"deleted": {"courses": courses_deleted, "messages": messages_deleted}}), 200
+
+
+@admin_bp.route("/api/admin/courses/<course_id>", methods=["DELETE"])
+def delete_course(course_id):
+    if not _is_authorized():
+        return jsonify({"error": "unauthorized"}), 403
+
+    course = Course.query.get(course_id)
+    if not course:
+        return jsonify({"error": "course not found"}), 404
+
+    db.session.delete(course)
+    db.session.commit()
+    return jsonify({"deleted": course_id}), 200
