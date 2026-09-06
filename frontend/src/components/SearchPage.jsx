@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BackButton from "./BackButton.jsx";
 import ResultCard from "./ResultCard.jsx";
 import searchBg from "../assets/search-bg.webp";
@@ -19,15 +19,24 @@ const FILTER_OPTIONS = {
   時限: ["1限", "2限", "3限", "4限", "5限", "6限", "7限"],
 };
 
-export default function SearchPage({ onBack, onSelectCourse }) {
-  const [filters, setFilters] = useState({});
-  const [searchQuery, setSearchQuery] = useState("");
-  const [teacherQuery, setTeacherQuery] = useState("");
+// 授業詳細などに遷移して戻ってきたときも検索条件・結果が消えないよう、
+// コンポーネントの外(モジュールスコープ)に保持しておく。
+// タブを閉じる/リロードすると消えるが、画面遷移だけなら保持される。
+let cachedSearchState = null;
 
-  const [results, setResults] = useState([]);
+export default function SearchPage({ onBack, onSelectCourse }) {
+  const [filters, setFilters] = useState(cachedSearchState?.filters ?? {});
+  const [searchQuery, setSearchQuery] = useState(cachedSearchState?.searchQuery ?? "");
+  const [teacherQuery, setTeacherQuery] = useState(cachedSearchState?.teacherQuery ?? "");
+
+  const [results, setResults] = useState(cachedSearchState?.results ?? []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [hasSearched, setHasSearched] = useState(false);
+  const [hasSearched, setHasSearched] = useState(cachedSearchState?.hasSearched ?? false);
+
+  useEffect(() => {
+    cachedSearchState = { filters, searchQuery, teacherQuery, results, hasSearched };
+  }, [filters, searchQuery, teacherQuery, results, hasSearched]);
 
   const handleSearch = async () => {
     setLoading(true);
