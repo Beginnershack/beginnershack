@@ -48,10 +48,16 @@ export default function SearchPage({ onBack, onSelectCourse }) {
       if (searchQuery && teacherQuery) {
         data = data.filter((c) => (c.担当教員 || "").includes(teacherQuery));
       }
-      // 学科が未選択で学部だけ選ばれている場合、バックエンドの完全一致では
-      // 絞り込めないのでクライアント側で学部学科の前方一致にする
+      // 学部学科はバックエンドが完全一致でしか絞り込めないため、
+      // 片方だけ選択されている場合はクライアント側で部分一致にする
       if (filters.学部 && !filters.学科) {
         data = data.filter((c) => (c.学部学科 || "").startsWith(filters.学部));
+      } else if (!filters.学部 && filters.学科) {
+        data = data.filter((c) => (c.学部学科 || "").includes(filters.学科));
+      }
+      // 開講学期はバックエンドが対応していないのでクライアント側で絞り込む
+      if (filters.開講学期) {
+        data = data.filter((c) => c.開講学期 === filters.開講学期);
       }
       setResults(data);
     } catch {
