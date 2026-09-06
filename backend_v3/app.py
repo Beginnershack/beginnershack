@@ -159,66 +159,6 @@ def hello():
 def health():
     return jsonify({"status": "ok"})
 
-
-@app.route("/api/admin/test-scrape", methods=["GET"])
-def test_scrape():
-    """シラバスサイトへの実スクレイピングが本番環境から機能しているか
-    診断するための一時的なエンドポイント。EMERGENCY_CACHEは参照せず、
-    必ずライブでリクエストを送る。DBへの書き込みは一切行わない。"""
-    from routes.admin import _is_authorized
-
-    if not _is_authorized():
-        return jsonify({"error": "unauthorized"}), 403
-
-    course_code = (request.args.get("courseCode") or "").strip()
-    teacher_name = (request.args.get("teacherName") or "").strip()
-    if not course_code or not teacher_name:
-        return jsonify({"error": "courseCode and teacherName query params are required"}), 400
-
-    normalized_teacher = teacher_name.replace(" ", "").replace("　", "")
-    search_url = f"https://syllabus.aitech.ac.jp/ext_syllabus/syllabusSearch.do?freeWord={course_code}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-
-    result = {
-        "courseCode": course_code,
-        "teacherName": teacher_name,
-        "normalizedTeacher": normalized_teacher,
-        "searchUrl": search_url,
-    }
-    try:
-        response = requests.get(search_url, headers=headers, timeout=10)
-        result["httpStatus"] = response.status_code
-        result["responseLength"] = len(response.text)
-        result["responseSnippet"] = response.text[:1500]
-
-        soup = BeautifulSoup(response.text, "html.parser")
-        rows = soup.find_all("tr")
-        result["rowCount"] = len(rows)
-
-        matched_row_text = None
-        subject_id = None
-        for row in rows:
-            row_text = row.get_text()
-            if normalized_teacher in row_text.replace(" ", "").replace("　", ""):
-                matched_row_text = row_text.strip()[:300]
-                link = row.find("a", href=True)
-                if link and "subjectId=" in link["href"]:
-                    match = re.search(r"subjectId=([0-9]+)", link["href"])
-                    if match:
-                        subject_id = match.group(1)
-                break
-
-        result["matchedRowText"] = matched_row_text
-        result["subjectId"] = subject_id
-        result["success"] = subject_id is not None
-    except Exception as e:
-        result["exception"] = f"{type(e).__name__}: {e}"
-        result["success"] = False
-
-    return jsonify(result), 200
-
 @app.route("/api/courses", methods=["POST"])
 def post_course():
     body = request.get_json(silent=True) or {}
