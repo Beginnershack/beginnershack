@@ -89,28 +89,67 @@ def scrape_subject_id(course_code, teacher_name):
     }
 
     normalized_teacher = teacher_name.replace(" ", "").replace("　", "")
+    normalized_code = course_code.strip().upper()
 
     if (course_code, normalized_teacher) in EMERGENCY_CACHE:
         return EMERGENCY_CACHE[(course_code, normalized_teacher)]
 
-    search_url = f"https://syllabus.aitech.ac.jp/ext_syllabus/syllabusSearch.do?freeWord={course_code}"
+    # 実際の検索フォームはGET+freeWord(授業コード)では機能しない。
+    # ブラウザの開発者ツールで確認したところ、正しくは
+    # 1) トップページに先にアクセスしてセッション(JSESSIONID)を確立し、
+    # 2) syllabusSearch.doへPOSTで担当教員名(editorName)を送る
+    # という手順が必要だった。授業コードで直接検索できる項目は無いため、
+    # 教員名で検索したうえで、結果一覧の中から授業コードが完全一致する
+    # 行を探す。年度を表すsyllabusTitleIDは毎年値が変わるため、
+    # 検索フォームのページから都度取得する。
+    base_url = "https://syllabus.aitech.ac.jp/ext_syllabus/"
+    search_url = "https://syllabus.aitech.ac.jp/ext_syllabus/syllabusSearch.do"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
 
     try:
-        response = requests.get(search_url, headers=headers, timeout=3)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        rows = soup.find_all('tr')
+        session = requests.Session()
+        top_page = session.get(base_url, headers=headers, timeout=5)
+        top_soup = BeautifulSoup(top_page.text, "html.parser")
+        title_select = top_soup.find("select", attrs={"name": "syllabusTitleID"})
+        selected_option = title_select.find("option", selected=True) if title_select else None
+        syllabus_title_id = selected_option["value"] if selected_option else ""
 
-        for row in rows:
+        response = session.post(
+            search_url,
+            data={
+                "syllabusTitleID": syllabus_title_id,
+                "indexID": "",
+                "subFolderFlag": "on",
+                "syllabusCampus": "",
+                "syllabusSemester": "",
+                "syllabusWeek": "",
+                "syllabusHour": "",
+                "kamokuName": "",
+                "editorName": teacher_name,
+                "freeWord": "",
+                "actionStatus": "search",
+                "subFolderFlag2": "on",
+                "bottonType": "search",
+            },
+            headers=headers,
+            timeout=5,
+        )
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        for row in soup.find_all("tr"):
+            cells = row.find_all("td")
+            if not any(cell.get_text(strip=True).upper() == normalized_code for cell in cells):
+                continue
             row_text = row.get_text()
-            if normalized_teacher in row_text.replace(" ", "").replace("　", ""):
-                link = row.find('a', href=True)
-                if link and 'subjectId=' in link['href']:
-                    match = re.search(r'subjectId=([0-9]+)', link['href'])
-                    if match:
-                        return match.group(1)
+            if normalized_teacher not in row_text.replace(" ", "").replace("　", ""):
+                continue
+            link = row.find("a", onclick=True)
+            if link:
+                match = re.search(r"subjectId=([0-9]+)", link["onclick"])
+                if match:
+                    return match.group(1)
 
         return None
     except Exception:
