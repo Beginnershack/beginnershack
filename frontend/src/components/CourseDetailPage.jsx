@@ -77,7 +77,7 @@ export default function CourseDetailPage({ courseId, onBack, onMessage }) {
       {!loading && !error && course && (
         <>
           <div className="flex flex-col font-black gap-[6px] items-start leading-[100.07%] pl-[26px] pt-[24px] w-full">
-            <p className="text-[#182642] text-[26px]">{course.授業名}</p>
+            <p className="text-[#182642] text-[26px] leading-[130%]">{course.授業名}</p>
             <p className="text-[#8a93a6] text-[15px]">{course.投稿者 || "匿名"}さんの授業評価</p>
           </div>
 
