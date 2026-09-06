@@ -113,7 +113,7 @@ export default function PostReviewPage({ onBack }) {
   const [department, setDepartment] = useState("");
   const [semester, setSemester] = useState(SEMESTERS[0]);
   const [weekday, setWeekday] = useState("");
-  const [period, setPeriod] = useState("");
+  const [periods, setPeriods] = useState([]); // 時限は複数選択できるので配列で管理
   const [evalMethod, setEvalMethod] = useState(EVAL_METHODS[0]);
   const [attendance, setAttendance] = useState("あり");
   const [rakutanRating, setRakutanRating] = useState(0);
@@ -123,37 +123,47 @@ export default function PostReviewPage({ onBack }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  const togglePeriod = (p) => {
+    setPeriods((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+  };
+
+  const buildPayload = (p) => ({
+    授業名: courseName,
+    担当教員: teacher,
+    開講学期: semester,
+    授業コード: courseCode,
+    学部学科: [faculty, department].filter(Boolean).join("　"),
+    曜日: weekday,
+    時限: PERIODS.indexOf(p) + 1,
+    評価方法: evalMethod,
+    出席確認: attendance === "あり",
+    楽単度: rakutanRating,
+    コメント: comment,
+    投稿者ID: getMyId(),
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess(false);
     setSubmitting(true);
 
-    const payload = {
-      授業名: courseName,
-      担当教員: teacher,
-      開講学期: semester,
-      授業コード: courseCode,
-      学部学科: [faculty, department].filter(Boolean).join("　"),
-      曜日: weekday,
-      時限: PERIODS.indexOf(period) + 1,
-      評価方法: evalMethod,
-      出席確認: attendance === "あり",
-      楽単度: rakutanRating,
-      コメント: comment,
-      投稿者ID: getMyId(),
-    };
+    // 時限は複数選択できるので、選択した時限ごとに授業を1件ずつ投稿する。
+    // 何も選択していない場合は従来通りバックエンドの必須チェックに委ねる。
+    const targetPeriods = periods.length > 0 ? periods : [""];
 
     try {
-      const res = await fetch(`${API_BASE}/api/courses`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error || "投稿に失敗しました");
-        return;
+      for (const p of targetPeriods) {
+        const res = await fetch(`${API_BASE}/api/courses`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildPayload(p)),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(data.error || "投稿に失敗しました");
+          return;
+        }
       }
       setSuccess(true);
       setCourseName("");
@@ -163,7 +173,7 @@ export default function PostReviewPage({ onBack }) {
       setDepartment("");
       setSemester(SEMESTERS[0]);
       setWeekday("");
-      setPeriod("");
+      setPeriods([]);
       setEvalMethod(EVAL_METHODS[0]);
       setAttendance("あり");
       setRakutanRating(0);
@@ -237,9 +247,9 @@ export default function PostReviewPage({ onBack }) {
                 <button
                   key={p}
                   type="button"
-                  onClick={() => setPeriod(p)}
+                  onClick={() => togglePeriod(p)}
                   className={`flex items-center justify-center size-[48px] rounded-[73px] border-[1.5px] border-[rgba(217,217,217,0.73)] border-solid font-black text-[15px] ${
-                    period === p ? "bg-[#13b5a3] text-white" : "bg-white text-[#8a93a6]"
+                    periods.includes(p) ? "bg-[#13b5a3] text-white" : "bg-white text-[#8a93a6]"
                   }`}
                 >
                   {p}
