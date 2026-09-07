@@ -90,7 +90,7 @@ export default function CourseDetailPage({ courseId, onBack, onMessage }) {
             </InfoRow>
             <InfoRow icon={semesterIcon} label="開講学期/曜日・時限" bg="bg-[#f2faf8]">
               <p className="font-black text-[#182642] text-[16px]">
-                {course.開講学期}　・　{course.曜日}曜{course.時限}限
+                {course.開講学期}　・　{course.曜日}曜{String(course.時限 || "").replaceAll(",", "・")}限
               </p>
             </InfoRow>
             <InfoRow icon={evalIcon} label="評価方法/出席確認" bg="bg-white">

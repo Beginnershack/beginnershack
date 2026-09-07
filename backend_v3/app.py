@@ -50,15 +50,28 @@ app.register_blueprint(messages_bp)
 app.register_blueprint(admin_bp)
 
 def migrate_schema():
-    """db.create_all()は既存テーブルへのカラム追加はしないため、
-    足りないカラムがあれば手動で追加する（簡易マイグレーション）。"""
+    """db.create_all()は既存テーブルへのカラム追加/型変更はしないため、
+    足りないカラムや古い型があれば手動で直す（簡易マイグレーション）。"""
     inspector = inspect(db.engine)
-    if "messages" not in inspector.get_table_names():
-        return
-    columns = {col["name"] for col in inspector.get_columns("messages")}
-    if "image" not in columns:
-        db.session.execute(text("ALTER TABLE messages ADD COLUMN image TEXT"))
-        db.session.commit()
+    table_names = inspector.get_table_names()
+
+    if "messages" in table_names:
+        columns = {col["name"] for col in inspector.get_columns("messages")}
+        if "image" not in columns:
+            db.session.execute(text("ALTER TABLE messages ADD COLUMN image TEXT"))
+            db.session.commit()
+
+    if "courses" in table_names and db.engine.dialect.name == "postgresql":
+        # 2時間続きの授業を1件の授業として扱えるよう、periodをカンマ区切り
+        # 文字列("3,4"など)で保持できるINTEGER→VARCHARへ変更する。
+        # (SQLiteは型を厳密に強制しないため対応不要)
+        columns = {col["name"]: col for col in inspector.get_columns("courses")}
+        period_col = columns.get("period")
+        if period_col is not None and "INT" in str(period_col["type"]).upper():
+            db.session.execute(
+                text("ALTER TABLE courses ALTER COLUMN period TYPE VARCHAR(20) USING period::varchar")
+            )
+            db.session.commit()
 
 
 with app.app_context():
@@ -72,6 +85,36 @@ PORT = int(os.environ.get("PORT", 3001))
 評価方法一覧 = ["なし", "試験", "レポート", "試験とレポート"]
 曜日一覧 = ["月", "火", "水", "木", "金", "土", "日"]
 時限一覧 = [1, 2, 3, 4, 5, 6, 7]
+
+
+def parse_periods(value):
+    """「時限」の入力値を正規化する。2時間続きの授業などで複数時限
+    (例: "3,4") が渡されても、1つの授業として扱えるようにパースする。
+    不正な値が含まれる場合はNoneを返す。"""
+    if value is None:
+        return None
+
+    if isinstance(value, (int, float)):
+        raw_parts = [value]
+    else:
+        raw_parts = str(value).split(",")
+
+    periods = []
+    for part in raw_parts:
+        try:
+            p = int(part)
+        except (TypeError, ValueError):
+            return None
+        if p not in 時限一覧:
+            return None
+        if p not in periods:
+            periods.append(p)
+
+    if not periods:
+        return None
+
+    periods.sort()
+    return periods
 
 
 def scrape_subject_id(course_code, teacher_name):
@@ -177,7 +220,7 @@ def create_course(data):
         course_code=course_code,
         faculty=data.get("学部学科"),
         day_of_week=data.get("曜日"),
-        period=int(data.get("時限")),
+        period=",".join(str(p) for p in parse_periods(data.get("時限"))),
         exam_type=data.get("評価方法"),
         attendance_required=bool(data.get("出席確認")),
         easiness=int(data.get("楽単度")),
@@ -218,11 +261,7 @@ def post_course():
     if body.get("曜日") not in 曜日一覧:
         errors.append("曜日は必須です")
 
-    try:
-        時限ok = int(body.get("時限")) in 時限一覧
-    except (TypeError, ValueError):
-        時限ok = False
-    if not 時限ok:
+    if parse_periods(body.get("時限")) is None:
         errors.append("何限かは必須です")
 
     if body.get("評価方法") not in 評価方法一覧:

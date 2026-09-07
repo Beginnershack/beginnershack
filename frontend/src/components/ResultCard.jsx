@@ -34,7 +34,7 @@ export default function ResultCard({ course, onClick }) {
         <div className="flex gap-[8px] items-center w-full min-w-0">
           <img alt="" className="size-[18px] shrink-0" src={clockIcon} />
           <p className="font-medium leading-[130%] text-[#4b5768] text-[15px] truncate min-w-0 flex-1">
-            {course.開講学期}・{course.曜日}曜{course.時限}限
+            {course.開講学期}・{course.曜日}曜{String(course.時限 || "").replaceAll(",", "・")}限
           </p>
         </div>
       </div>

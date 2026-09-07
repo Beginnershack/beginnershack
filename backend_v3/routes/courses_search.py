@@ -32,7 +32,13 @@ def search_courses():
         except ValueError:
             period_int = None
         if period_int is not None:
-            courses = [c for c in courses if c.period == period_int]
+            # 時限はカンマ区切りで複数値を持ちうる (例: "3,4")ので、
+            # 指定された時限がそのいずれかに含まれていれば一致とみなす。
+            courses = [
+                c
+                for c in courses
+                if str(period_int) in (c.period or "").split(",")
+            ]
 
     return jsonify([c.to_dict() for c in courses])
 

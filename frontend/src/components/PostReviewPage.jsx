@@ -127,14 +127,18 @@ export default function PostReviewPage({ onBack }) {
     setPeriods((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
   };
 
-  const buildPayload = (p) => ({
+  // 時限は複数選択できる(2時間続きの授業など)。1つの授業として1件だけ
+  // 投稿し、選択した時限はカンマ区切りでまとめて送る(例: "3,4")。
+  // こうしないと時限ごとに別の授業として登録され、メッセージのスレッドも
+  // 時限の数だけ分かれてしまう。
+  const buildPayload = () => ({
     授業名: courseName,
     担当教員: teacher,
     開講学期: semester,
     授業コード: courseCode,
     学部学科: [faculty, department].filter(Boolean).join("　"),
     曜日: weekday,
-    時限: PERIODS.indexOf(p) + 1,
+    時限: periods.map((p) => PERIODS.indexOf(p) + 1).join(","),
     評価方法: evalMethod,
     出席確認: attendance === "あり",
     楽単度: rakutanRating,
@@ -148,22 +152,16 @@ export default function PostReviewPage({ onBack }) {
     setSuccess(false);
     setSubmitting(true);
 
-    // 時限は複数選択できるので、選択した時限ごとに授業を1件ずつ投稿する。
-    // 何も選択していない場合は従来通りバックエンドの必須チェックに委ねる。
-    const targetPeriods = periods.length > 0 ? periods : [""];
-
     try {
-      for (const p of targetPeriods) {
-        const res = await fetch(`${API_BASE}/api/courses`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(buildPayload(p)),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setError(data.error || "投稿に失敗しました");
-          return;
-        }
+      const res = await fetch(`${API_BASE}/api/courses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildPayload()),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "投稿に失敗しました");
+        return;
       }
       setSuccess(true);
       setCourseName("");

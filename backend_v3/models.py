@@ -24,7 +24,10 @@ class Course(db.Model):
     course_code = db.Column(db.String(50))
     faculty = db.Column(db.String(255))
     day_of_week = db.Column(db.String(10))
-    period = db.Column(db.Integer)
+    # 2時間続きの授業など複数時限にまたがる場合はカンマ区切りで複数値を持つ
+    # (例: "3,4")。1件の投稿を1つの授業として扱うことで、口コミごとに
+    # チャットスレッドが1つだけ作られるようにする。
+    period = db.Column(db.String(20))
     exam_type = db.Column(db.String(50))
     attendance_required = db.Column(db.Boolean, default=False)
     easiness = db.Column(db.Integer)
@@ -67,7 +70,7 @@ class Course(db.Model):
             course_code=record.get("授業コード"),
             faculty=record.get("学部学科"),
             day_of_week=record.get("曜日"),
-            period=_safe_int(record.get("時限")),
+            period=str(record.get("時限")) if record.get("時限") not in (None, "") else None,
             exam_type=record.get("評価方法"),
             attendance_required=bool(record.get("出席確認")),
             easiness=_safe_int(record.get("楽単度")),
