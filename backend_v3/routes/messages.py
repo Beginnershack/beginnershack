@@ -96,6 +96,48 @@ def get_inbox():
     return jsonify(inbox), 200
 
 
+# --- 自分が質問した相手とのスレッド一覧 (GET) ---
+# 自分が(投稿者としてではなく)質問する側として実際にメッセージを
+# やり取りした授業だけを、最新メッセージ付きでまとめて返す。
+@messages_bp.route("/api/messages/asked", methods=["GET"])
+def get_asked():
+    my_id = request.args.get("myId", "").strip()
+    if not my_id:
+        return jsonify([]), 200
+
+    messages = Message.query.filter(
+        db.or_(Message.sender == my_id, Message.receiver == my_id)
+    ).all()
+    if not messages:
+        return jsonify([]), 200
+
+    course_ids = {(m.receiver if m.sender == my_id else m.sender) for m in messages}
+    courses = {c.id: c for c in Course.query.filter(Course.id.in_(course_ids)).all()}
+
+    threads = {}  # courseId -> 最新メッセージ
+    for m in messages:
+        course_id = m.receiver if m.sender == my_id else m.sender
+        if course_id not in courses:
+            continue
+        prev = threads.get(course_id)
+        if not prev or (m.created_at or "") > (prev.created_at or ""):
+            threads[course_id] = m
+
+    asked = []
+    for course_id, last_msg in threads.items():
+        course = courses[course_id]
+        asked.append({
+            "courseId": course_id,
+            "courseName": course.course_name,
+            "posterName": course.author or "匿名",
+            "lastMessage": last_msg.body,
+            "lastMessageAt": last_msg.created_at,
+        })
+
+    asked.sort(key=lambda r: r["lastMessageAt"] or "", reverse=True)
+    return jsonify(asked), 200
+
+
 # --- メッセージを送る (POST) ---
 @messages_bp.route("/api/messages", methods=["POST"])
 def post_message():

@@ -34,7 +34,7 @@ export default function MessageListPage({ onBack, onSelectConversation }) {
   const myId = getMyId();
   const [tab, setTab] = useState("inbox");
   const [inbox, setInbox] = useState([]);
-  const [courses, setCourses] = useState([]);
+  const [asked, setAsked] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -43,18 +43,18 @@ export default function MessageListPage({ onBack, onSelectConversation }) {
     setError("");
     Promise.all([
       fetch(`${API_BASE}/api/messages/inbox?myId=${encodeURIComponent(myId)}`).then((r) => (r.ok ? r.json() : [])),
-      fetch(`${API_BASE}/api/courses`).then((r) => (r.ok ? r.json() : [])),
+      fetch(`${API_BASE}/api/messages/asked?myId=${encodeURIComponent(myId)}`).then((r) => (r.ok ? r.json() : [])),
     ])
-      .then(([inboxData, coursesData]) => {
+      .then(([inboxData, askedData]) => {
         setInbox(inboxData);
-        setCourses(coursesData);
+        setAsked(askedData);
         setTab(inboxData.length > 0 ? "inbox" : "courses");
       })
       .catch(() => setError("読み込みに失敗しました"))
       .finally(() => setLoading(false));
   }, [myId]);
 
-  const items = tab === "inbox" ? inbox : courses;
+  const items = tab === "inbox" ? inbox : asked;
 
   return (
     <div className="bg-white relative w-full max-w-[402px] min-h-[var(--rf-fill-height)] overflow-hidden">
@@ -79,7 +79,7 @@ export default function MessageListPage({ onBack, onSelectConversation }) {
             tab === "courses" ? "bg-[#13b5a3] text-white" : "bg-[#f2f4f7] text-[#8a93a6]"
           }`}
         >
-          質問する
+          質問する {asked.length > 0 ? `(${asked.length})` : ""}
         </button>
       </div>
 
@@ -100,7 +100,7 @@ export default function MessageListPage({ onBack, onSelectConversation }) {
         <div className="flex flex-col items-center gap-[12px] pt-[60px] w-full">
           <img alt="" className="size-[64px]" src={commentIcon} />
           <p className="font-black text-[#8a93a6] text-[15px]">
-            {tab === "inbox" ? "まだ届いたメッセージはありません" : "まだ口コミがありません"}
+            {tab === "inbox" ? "まだ届いたメッセージはありません" : "まだ質問したことがありません"}
           </p>
         </div>
       )}
@@ -124,17 +124,17 @@ export default function MessageListPage({ onBack, onSelectConversation }) {
                   }
                 />
               ))
-            : courses.map((course) => (
+            : asked.map((thread) => (
                 <Row
-                  key={course.id}
-                  id={course.id}
-                  title={`${course.投稿者 || "匿名"}さん`}
-                  subtitle={course.授業名}
+                  key={thread.courseId}
+                  id={thread.courseId}
+                  title={thread.courseName}
+                  subtitle={thread.lastMessage}
                   onClick={() =>
                     onSelectConversation?.({
                       askerId: myId,
-                      courseId: course.id,
-                      courseName: course.授業名,
+                      courseId: thread.courseId,
+                      courseName: thread.courseName,
                       role: "asker",
                     })
                   }
